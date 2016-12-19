@@ -1,0 +1,178 @@
+---
+title: "Practical Machine Learning Final Project"
+author: "Svetoslava"
+output: html_document
+
+---
+
+##**Assignment Background**
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.puc-rio.br/har) 
+From the section on the **Weight Lifting Exercise Dataset** the following further information is available:
+
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
+
+Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate. The exercises were performed by six male participants aged between 20-28 years, with little weight lifting experience. We made sure that all participants could easily simulate the mistakes in a safe and controlled manner by using a relatively light dumbbell (1.25kg).
+
+
+_**Read more:**_ [http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises#ixzz4TGOJ1z64](http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises#ixzz4TGOJ1z64)
+
+
+##**Model Used**
+
+The outcome variable chosen in this assignment is _classe_. As stated in the original WLE Dataset "Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: 
+- Class A - exactly according to the specification 
+- Class B - throwing the elbows to the front
+- Class C - lifting the dumbbell only halfway
+- Class D - lowering the dumbbell only halfway
+- Class E - throwing the hips to the front"
+
+Two models will be tested using decision tree and random forest. The model with the highest accuracy will be chosen as our final model. The seed will be randomly set at 12345 for all code. 
+
+
+##**Cross Validation**
+
+As we have a large Training data set, our cross-validation will be done by splitting our original training set into 2 subsets (randomly without replacement): TrainingTraining set (70%) and TestingTraining set (30%). The decision tree and random forest models will be developed using the TrainingTraining data set, and then tested on the TrainingTesting data. Then the most accurate model choosen will be tested on the original Testing data set.
+
+
+##**Out of sample error**
+
+The expected out of sample error will correspond to the quantity: 1-accuracy in the cross validation data. Accuracy is the proportion of correctly classified observations over the total sample in the TrainingTesting data set. 
+
+
+**Installing Packages, Libraries and Seed**
+
+Load the previously installed packages into R:
+``` {r}
+library(caret)
+```
+```{r}
+library(randomForest)
+```
+```{r}
+library(rpart)
+```
+```{r}
+library(rpart.plot)
+```
+```{r}
+library(RColorBrewer)
+```
+```{r}
+library(rattle)
+```
+```{r}
+library(randomForest)
+```
+```{r}
+set.seed(12345)
+```
+
+**Getting and Downloading the Original Data Sets**
+
+The training data set can be found on the following URL:
+
+```{r}
+trainUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+```
+
+The testing data set can be found on the following URL:
+
+```{r}
+testUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+```
+
+Save the data sets:
+
+```{r}
+Training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+```
+```{r}
+Testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+```
+
+**Delete columns with all missing values**
+```{r}
+Training <-Training[,colSums(is.na(Training)) == 0]
+Testing <-Testing[,colSums(is.na(Testing)) == 0]
+```
+
+**Delete variables irrelevant to the current project: user_name, raw_timestamp_part_1, raw_timestamp_part_,2 cvtd_timestamp, new_window, and  num_window (columns 1 to 7).** 
+```{r}
+Training   <-Training[,-c(1:7)]
+Testing <-Testing[,-c(1:7)]
+```
+
+**Perform exploratory analysis:**
+dim(Training); 
+dim(Testing); 
+summary(Training); 
+summary(Testing); 
+str(Training); 
+str(Testing); 
+head(Training); 
+head(Testing)
+
+
+**Partition the Training data set**
+
+Partition so that 70% of it is in the TrainingTraining data set and the remaining 30% to TestingTraining
+
+```{r}
+inTrainingSet <- createDataPartition(y=Training$classe, p=0.70, list=FALSE)
+TrainingTraining <- Training[inTrainingSet, ]; TestingTraining <- Training[-inTrainingSet, ]
+dim(TrainingTraining); dim(TestingTraining)
+```
+
+##First Prediction Model - Decision Tree
+
+```{r}
+FirstModel <- rpart(classe ~ ., data=TrainingTraining, method="class")
+```
+
+**View the Decision Tree using fancy**
+```{r}
+fancyRpartPlot(FirstModel)
+```
+
+**Predicting**
+```{r}
+FirstPrediction <- predict(FirstModel, TestingTraining, type = "class")
+```
+
+**Using confusion Matrix to test results:**
+
+```{r}
+confusionMatrix(FirstPrediction, TestingTraining$classe)
+```
+
+##Second Prediction Model - Random Forests
+
+```{r}
+SecondModel <- randomForest(classe ~. , data=TrainingTraining, method="class")
+```
+
+**Predicting:**
+```{r}
+SecondPrediction <- predict(SecondModel, TestingTraining, type = "class")
+```
+
+**Test results on TestingTraining data set:**
+```{r}
+confusionMatrix(SecondPrediction, TestingTraining$classe)
+```
+
+##Conclusion
+
+Random Forest algorithm performed better than Decision Trees. Accuracy for Random Forest model was 0.99 compared to Decision Tree model with 0.72. The Random Forests model is choosen. The expected out-of-sample error is estimated at 0.008.
+
+##Testing the better model on original Testing Set.
+
+Here is the final outcome based on Second Prediction Model:
+
+_Predict outcome levels on the original Testing data:_
+
+```{r}
+FinalPrediction <- predict(SecondModel, Testing, type="class")
+FinalPrediction
+```
